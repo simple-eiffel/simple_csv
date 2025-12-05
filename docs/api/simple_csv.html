@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIMPLE_CSV API Reference</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="icon" type="image/png" href="../images/logo.png">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <img src="../images/logo.png" alt="simple_* logo" class="logo">
+        </div>
+        <h1>SIMPLE_CSV</h1>
+        <p class="tagline">API Reference</p>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="#creation">Creation</a></li>
+            <li><a href="#parsing">Parsing</a></li>
+            <li><a href="#access">Access</a></li>
+            <li><a href="#generation">Generation</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section>
+            <h2>Class Overview</h2>
+            <p>
+                <code>SIMPLE_CSV</code> provides RFC 4180 compliant CSV parsing and generation
+                for Eiffel applications. It handles quoted fields, embedded commas, escaped quotes,
+                and multi-line values.
+            </p>
+        </section>
+
+        <section id="creation">
+            <h2>Creation Features</h2>
+
+            <div class="api-section">
+                <h3>make</h3>
+                <div class="signature">create csv.make</div>
+                <p>Initialize CSV parser with comma delimiter, no header row.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="ensure">ensure: comma_delimiter: delimiter = ','</div>
+                    <div class="ensure">ensure: default_quote: quote_char = '"'</div>
+                    <div class="ensure">ensure: no_header: not has_header</div>
+                    <div class="ensure">ensure: rows_empty: rows.is_empty</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>make_with_header</h3>
+                <div class="signature">create csv.make_with_header</div>
+                <p>Initialize CSV parser expecting first row as header. Enables column name lookup.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="ensure">ensure: comma_delimiter: delimiter = ','</div>
+                    <div class="ensure">ensure: has_header_set: has_header</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>make_with_delimiter (a_delimiter: CHARACTER)</h3>
+                <div class="signature">create csv.make_with_delimiter ('%T')  -- Tab-separated</div>
+                <p>Initialize CSV parser with custom delimiter character.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: valid_delimiter: a_delimiter /= '%N' and a_delimiter /= '%R'</div>
+                    <div class="ensure">ensure: delimiter_set: delimiter = a_delimiter</div>
+                    <div class="ensure">ensure: no_header: not has_header</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="parsing">
+            <h2>Parsing Features</h2>
+
+            <div class="api-section">
+                <h3>parse (a_input: STRING)</h3>
+                <div class="signature">csv.parse ("name,age%NJohn,30%NJane,25")</div>
+                <p>Parse CSV data from a string. Handles quoted fields, escaped quotes, and multi-line values.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: input_not_void: a_input /= Void</div>
+                    <div class="ensure">ensure: header_mode_unchanged: has_header = old has_header</div>
+                    <div class="ensure">ensure: header_map_built: (has_header and rows.count > 0) implies header_map.count = rows.first.count</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>parse_file (a_path: STRING)</h3>
+                <div class="signature">csv.parse_file ("data.csv")</div>
+                <p>Parse CSV data from a file at the given path.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: path_not_void: a_path /= Void</div>
+                    <div class="require">require: path_not_empty: not a_path.is_empty</div>
+                    <div class="ensure">ensure: header_mode_unchanged: has_header = old has_header</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="access">
+            <h2>Access Features</h2>
+
+            <div class="api-section">
+                <h3>field (a_row, a_column: INTEGER): STRING</h3>
+                <div class="signature">value := csv.field (1, 2)  -- Row 1, Column 2</div>
+                <p>Get field at row/column position. Both indices are 1-based. Row 1 is first data row (after header if present).</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: valid_row: a_row >= 1 and a_row <= row_count</div>
+                    <div class="require">require: valid_column: a_column >= 1 and a_column <= column_count</div>
+                    <div class="ensure">ensure: result_not_void: Result /= Void</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>field_by_name (a_row: INTEGER; a_column_name: STRING): STRING</h3>
+                <div class="signature">age := csv.field_by_name (1, "age")</div>
+                <p>Get field at row by column name. Requires header row. Column name lookup is case-insensitive.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: has_header: has_header</div>
+                    <div class="require">require: valid_row: a_row >= 1 and a_row <= row_count</div>
+                    <div class="require">require: valid_column_name: has_column (a_column_name)</div>
+                    <div class="ensure">ensure: result_not_void: Result /= Void</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>row (a_row: INTEGER): ARRAYED_LIST [STRING]</h3>
+                <div class="signature">fields := csv.row (2)</div>
+                <p>Get all fields in the specified row as a list.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: valid_row: a_row >= 1 and a_row <= row_count</div>
+                    <div class="ensure">ensure: result_not_void: Result /= Void</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>column (a_column: INTEGER): ARRAYED_LIST [STRING]</h3>
+                <div class="signature">values := csv.column (1)</div>
+                <p>Get all values in the specified column as a list.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: valid_column: a_column >= 1 and a_column <= column_count</div>
+                    <div class="ensure">ensure: result_not_void: Result /= Void</div>
+                    <div class="ensure">ensure: correct_count: Result.count = row_count</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>column_by_name (a_column_name: STRING): ARRAYED_LIST [STRING]</h3>
+                <div class="signature">ages := csv.column_by_name ("age")</div>
+                <p>Get all values in column by name. Requires header row.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: has_header: has_header</div>
+                    <div class="require">require: valid_column_name: has_column (a_column_name)</div>
+                    <div class="ensure">ensure: result_not_void: Result /= Void</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>headers: ARRAYED_LIST [STRING]</h3>
+                <div class="signature">header_names := csv.headers</div>
+                <p>Get the header row names.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: has_header: has_header</div>
+                    <div class="ensure">ensure: result_not_void: Result /= Void</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="query">
+            <h2>Query Features</h2>
+
+            <div class="api-section">
+                <h3>row_count: INTEGER</h3>
+                <div class="signature">n := csv.row_count</div>
+                <p>Number of data rows (excluding header if present).</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="ensure">ensure: non_negative: Result >= 0</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>column_count: INTEGER</h3>
+                <div class="signature">n := csv.column_count</div>
+                <p>Number of columns (from first row).</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="ensure">ensure: non_negative: Result >= 0</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>has_column (a_name: STRING): BOOLEAN</h3>
+                <div class="signature">if csv.has_column ("email") then ...</div>
+                <p>Check if a column with the given name exists. Case-insensitive.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: name_not_void: a_name /= Void</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>column_index (a_name: STRING): INTEGER</h3>
+                <div class="signature">idx := csv.column_index ("age")</div>
+                <p>Get 1-based index of column by name.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: name_not_void: a_name /= Void</div>
+                    <div class="require">require: has_column: has_column (a_name)</div>
+                    <div class="ensure">ensure: valid_lower_bound: Result >= 1</div>
+                    <div class="ensure">ensure: valid_upper_bound: Result <= column_count</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>is_empty: BOOLEAN</h3>
+                <div class="signature">if csv.is_empty then ...</div>
+                <p>Check if CSV has no data rows.</p>
+            </div>
+        </section>
+
+        <section id="generation">
+            <h2>Generation Features</h2>
+
+            <div class="api-section">
+                <h3>to_csv: STRING</h3>
+                <div class="signature">output := csv.to_csv</div>
+                <p>Generate CSV string from current data. Properly escapes fields containing delimiters, quotes, or newlines.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="ensure">ensure: result_not_void: Result /= Void</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>add_data_row (a_fields: ARRAY [STRING])</h3>
+                <div class="signature">csv.add_data_row (<<"John", "30", "NYC">>)</div>
+                <p>Add a data row from an array of field values.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: fields_not_void: a_fields /= Void</div>
+                    <div class="require">require: fields_not_empty: a_fields.count > 0</div>
+                    <div class="ensure">ensure: row_added: rows.count = old rows.count + 1</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>set_headers (a_headers: ARRAY [STRING])</h3>
+                <div class="signature">csv.set_headers (<<"name", "age", "city">>)</div>
+                <p>Set the header row. If has_header is already True, replaces existing header. Otherwise, inserts header at front preserving existing data.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: headers_not_void: a_headers /= Void</div>
+                    <div class="require">require: headers_not_empty: a_headers.count > 0</div>
+                    <div class="ensure">ensure: has_header_set: has_header</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>clear</h3>
+                <div class="signature">csv.clear</div>
+                <p>Clear all data and header map.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="ensure">ensure: rows_empty: rows.is_empty</div>
+                    <div class="ensure">ensure: header_map_empty: header_map.is_empty</div>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>set_delimiter (a_delimiter: CHARACTER)</h3>
+                <div class="signature">csv.set_delimiter (';')</div>
+                <p>Change the field delimiter.</p>
+                <div class="contracts">
+                    <h4>Contracts</h4>
+                    <div class="require">require: valid_delimiter: a_delimiter /= '%N' and a_delimiter /= '%R'</div>
+                    <div class="ensure">ensure: delimiter_set: delimiter = a_delimiter</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="invariants">
+            <h2>Class Invariants</h2>
+            <div class="contracts">
+                <div class="ensure">invariant: rows_exist: rows /= Void</div>
+                <div class="ensure">invariant: header_map_exists: header_map /= Void</div>
+                <div class="ensure">invariant: valid_delimiter: delimiter /= '%N' and delimiter /= '%R'</div>
+                <div class="ensure">invariant: valid_quote_char: quote_char /= '%N' and quote_char /= '%R'</div>
+                <div class="ensure">invariant: delimiter_not_quote: delimiter /= quote_char</div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>
+            <a href="../index.html">&larr; Back to simple_csv</a>
+        </p>
+        <p class="copyright">
+            Copyright &copy; 2024-2025 Larry Rix. MIT License.
+        </p>
+    </footer>
+</body>
+</html>
