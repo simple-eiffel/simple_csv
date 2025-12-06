@@ -257,8 +257,6 @@ feature -- Access
 				l_actual_row := l_actual_row + 1
 			end
 			Result := rows [l_actual_row] [a_column]
-		ensure
-			result_not_void: Result /= Void
 		end
 
 	field_by_name (a_row: INTEGER; a_column_name: STRING): STRING
@@ -272,8 +270,6 @@ feature -- Access
 		do
 			l_col := column_index (a_column_name)
 			Result := field (a_row, l_col)
-		ensure
-			result_not_void: Result /= Void
 		end
 
 	row (a_row: INTEGER): ARRAYED_LIST [STRING]
@@ -288,8 +284,6 @@ feature -- Access
 				l_actual_row := l_actual_row + 1
 			end
 			Result := rows [l_actual_row]
-		ensure
-			result_not_void: Result /= Void
 		end
 
 	column (a_column: INTEGER): ARRAYED_LIST [STRING]
@@ -322,7 +316,6 @@ feature -- Access
 				rows.count - i + 1
 			end
 		ensure
-			result_not_void: Result /= Void
 			correct_count: Result.count = row_count
 		end
 
@@ -333,8 +326,6 @@ feature -- Access
 			valid_column_name: has_column (a_column_name)
 		do
 			Result := column (column_index (a_column_name))
-		ensure
-			result_not_void: Result /= Void
 		end
 
 	headers: ARRAYED_LIST [STRING]
@@ -347,8 +338,6 @@ feature -- Access
 			else
 				create Result.make (0)
 			end
-		ensure
-			result_not_void: Result /= Void
 		end
 
 feature -- Null Value Handling
@@ -416,8 +405,6 @@ feature -- Row Iteration
 			valid_iteration: iteration_index >= 1 and iteration_index <= row_count
 		do
 			Result := row (iteration_index)
-		ensure
-			result_not_void: Result /= Void
 		end
 
 	current_field (a_column: INTEGER): STRING
@@ -427,8 +414,6 @@ feature -- Row Iteration
 			valid_column: a_column >= 1 and a_column <= column_count
 		do
 			Result := field (iteration_index, a_column)
-		ensure
-			result_not_void: Result /= Void
 		end
 
 	current_field_by_name (a_column_name: STRING): STRING
@@ -439,8 +424,6 @@ feature -- Row Iteration
 			valid_column_name: has_column (a_column_name)
 		do
 			Result := field_by_name (iteration_index, a_column_name)
-		ensure
-			result_not_void: Result /= Void
 		end
 
 	iteration_index: INTEGER
@@ -509,8 +492,6 @@ feature -- Generation
 			variant
 				rows.count - i + 1
 			end
-		ensure
-			result_not_void: Result /= Void
 		end
 
 	to_csv_with_bom: STRING
@@ -518,7 +499,6 @@ feature -- Generation
 		do
 			Result := Utf8_bom + to_csv
 		ensure
-			result_not_void: Result /= Void
 			has_bom: Result.count >= 3 implies (Result [1].code = 0xEF and Result [2].code = 0xBB and Result [3].code = 0xBF)
 		end
 
@@ -534,7 +514,6 @@ feature -- Generation
 			Result.append (Utf8_bom)
 			Result.append (to_csv)
 		ensure
-			result_not_void: Result /= Void
 			has_sep_directive: Result.starts_with ("sep=")
 		end
 
@@ -548,7 +527,6 @@ feature -- Generation
 			Result.append_character ('%N')
 			Result.append (to_csv)
 		ensure
-			result_not_void: Result /= Void
 			has_sep_directive: Result.starts_with ("sep=")
 		end
 
@@ -702,7 +680,6 @@ feature -- BOM Support
 				Result := a_input
 			end
 		ensure
-			result_not_void: Result /= Void
 			bom_stripped: not has_bom (Result)
 		end
 
@@ -768,8 +745,6 @@ feature {NONE} -- Implementation
 			else
 				Result := a_input
 			end
-		ensure
-			result_not_void: Result /= Void
 		end
 
 feature {NONE} -- Implementation (Data)
@@ -855,8 +830,6 @@ feature {NONE} -- Implementation (Data)
 			else
 				Result := a_field
 			end
-		ensure
-			result_not_void: Result /= Void
 		end
 
 feature -- Constants
@@ -869,7 +842,6 @@ feature -- Constants
 			Result.append_character ((0xBB).to_character_8)
 			Result.append_character ((0xBF).to_character_8)
 		ensure
-			result_not_void: Result /= Void
 			correct_length: Result.count = 3
 		end
 
