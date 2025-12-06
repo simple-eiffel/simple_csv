@@ -83,6 +83,17 @@ csv.parse (<span class="string">"a%Tb%Tc%N1%T2%T3"</span>)
 <span class="comment">-- Semicolon-separated (European locale)</span>
 <span class="keyword">create</span> csv.make_with_delimiter (<span class="string">';'</span>)
 csv.parse (<span class="string">"a;b;c"</span>)</code></pre>
+
+            <h3>Excel Compatibility</h3>
+<pre><code><span class="comment">-- Generate CSV with sep= directive for Excel</span>
+csv_for_excel := csv.to_csv_excel
+<span class="comment">-- Outputs: "sep=,%N" prefix + BOM + CSV data</span>
+<span class="comment">-- Excel will automatically use correct delimiter</span>
+
+<span class="comment">-- Parse CSV with sep= directive</span>
+<span class="comment">-- Automatically extracts delimiter from sep= line</span>
+csv.parse (<span class="string">"sep=;%Na;b;c%N1;2;3"</span>)
+<span class="comment">-- Parses with semicolon delimiter</span></code></pre>
         </section>
 
         <section id="features">
@@ -112,6 +123,10 @@ csv.parse (<span class="string">"a;b;c"</span>)</code></pre>
                 <div class="feature-card">
                     <h4>Design by Contract</h4>
                     <p>Full preconditions, postconditions, and loop invariants for correctness verification.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Excel Compatibility</h4>
+                    <p>Support for <code>sep=</code> directive and BOM. Excel automatically detects delimiter.</p>
                 </div>
             </div>
         </section>
@@ -245,6 +260,14 @@ csv.parse (<span class="string">"a;b;c"</span>)</code></pre>
                         <td>Generate CSV string from data</td>
                     </tr>
                     <tr>
+                        <td><code>to_csv_excel</code></td>
+                        <td>Generate with sep= directive + BOM for Excel</td>
+                    </tr>
+                    <tr>
+                        <td><code>to_csv_excel_no_bom</code></td>
+                        <td>Generate with sep= directive (no BOM)</td>
+                    </tr>
+                    <tr>
                         <td><code>add_data_row (fields)</code></td>
                         <td>Add a data row</td>
                     </tr>
@@ -265,13 +288,14 @@ csv.parse (<span class="string">"a;b;c"</span>)</code></pre>
         <section id="testing">
             <h2>Testing</h2>
             <p>
-                The library includes a comprehensive test suite with <strong>25+ tests</strong> covering:
+                The library includes a comprehensive test suite with <strong>50 tests</strong> covering:
             </p>
             <ul>
                 <li>Basic parsing with single and multiple rows</li>
                 <li>Quoted fields with embedded commas, quotes, and newlines</li>
                 <li>Header row handling and column name lookup</li>
                 <li>Custom delimiters (tab, semicolon)</li>
+                <li>Excel sep= directive parsing and generation</li>
                 <li>CSV generation and roundtrip encoding</li>
                 <li>Edge cases (empty fields, empty strings, CRLF line endings)</li>
             </ul>

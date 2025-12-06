@@ -675,4 +675,116 @@ feature -- Test: Null Handling
 			assert ("jane value not null", not csv.is_null_by_name (2, "value"))
 		end
 
+feature -- Test: Excel sep= Directive
+
+	test_has_sep_directive
+			-- Test detection of sep= directive.
+		note
+			testing: "covers/{SIMPLE_CSV}.has_sep_directive"
+		local
+			csv: SIMPLE_CSV
+		do
+			create csv.make
+			assert ("has sep=", csv.has_sep_directive ("sep=;%Na;b;c"))
+			assert ("no sep=", not csv.has_sep_directive ("a,b,c%N1,2,3"))
+		end
+
+	test_extract_sep_delimiter
+			-- Test extraction of delimiter from sep= directive.
+		note
+			testing: "covers/{SIMPLE_CSV}.extract_sep_delimiter"
+		local
+			csv: SIMPLE_CSV
+		do
+			create csv.make
+			assert_integers_equal ("semicolon", (';').code, csv.extract_sep_delimiter ("sep=;%Na;b").code)
+			assert_integers_equal ("tab", ('%T').code, csv.extract_sep_delimiter ("sep=%T%Na%Tb").code)
+			assert_integers_equal ("pipe", ('|').code, csv.extract_sep_delimiter ("sep=|%Na|b").code)
+		end
+
+	test_parse_sep_directive_semicolon
+			-- Test parsing CSV with sep= directive (semicolon).
+		note
+			testing: "covers/{SIMPLE_CSV}.parse"
+		local
+			csv: SIMPLE_CSV
+		do
+			create csv.make
+			csv.parse ("sep=;%Nname;age%Njohn;30")
+			assert_integers_equal ("2 rows", 2, csv.row_count)
+			assert_strings_equal ("first field", "name", csv.field (1, 1))
+			assert_strings_equal ("john", "john", csv.field (2, 1))
+			assert_strings_equal ("30", "30", csv.field (2, 2))
+		end
+
+	test_parse_sep_directive_tab
+			-- Test parsing CSV with sep= directive (tab).
+		note
+			testing: "covers/{SIMPLE_CSV}.parse"
+		local
+			csv: SIMPLE_CSV
+		do
+			create csv.make
+			csv.parse ("sep=%T%Na%Tb%Tc%N1%T2%T3")
+			assert_integers_equal ("2 rows", 2, csv.row_count)
+			assert_strings_equal ("a", "a", csv.field (1, 1))
+			assert_strings_equal ("3", "3", csv.field (2, 3))
+		end
+
+	test_to_csv_excel
+			-- Test Excel CSV generation with sep= directive and BOM.
+		note
+			testing: "covers/{SIMPLE_CSV}.to_csv_excel"
+		local
+			csv: SIMPLE_CSV
+			output: STRING
+		do
+			create csv.make
+			csv.set_delimiter (';')
+			csv.add_data_row (<<"a", "b", "c">>)
+			csv.add_data_row (<<"1", "2", "3">>)
+			output := csv.to_csv_excel
+			assert ("has sep=", output.starts_with ("sep=;"))
+			assert ("has data", output.has_substring ("a;b;c"))
+		end
+
+	test_to_csv_excel_no_bom
+			-- Test Excel CSV generation with sep= directive without BOM.
+		note
+			testing: "covers/{SIMPLE_CSV}.to_csv_excel_no_bom"
+		local
+			csv: SIMPLE_CSV
+			output: STRING
+		do
+			create csv.make
+			csv.set_delimiter ('|')
+			csv.add_data_row (<<"x", "y">>)
+			output := csv.to_csv_excel_no_bom
+			assert ("has sep=", output.starts_with ("sep=|"))
+			assert ("has data", output.has_substring ("x|y"))
+		end
+
+	test_roundtrip_sep_directive
+			-- Test roundtrip with sep= directive.
+		note
+			testing: "covers/{SIMPLE_CSV}.to_csv_excel_no_bom", "covers/{SIMPLE_CSV}.parse"
+		local
+			csv, csv2: SIMPLE_CSV
+			output: STRING
+		do
+			create csv.make_with_header
+			csv.set_delimiter (';')
+			csv.set_headers (<<"name", "value">>)
+			csv.add_data_row (<<"alpha", "1">>)
+			csv.add_data_row (<<"beta", "2">>)
+			output := csv.to_csv_excel_no_bom
+
+			create csv2.make_with_header
+			csv2.parse (output)
+			assert_integers_equal ("2 data rows", 2, csv2.row_count)
+			assert_strings_equal ("alpha", "alpha", csv2.field (1, 1))
+			assert_strings_equal ("beta", "beta", csv2.field (2, 1))
+			assert_strings_equal ("2", "2", csv2.field (2, 2))
+		end
+
 end

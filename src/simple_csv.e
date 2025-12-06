@@ -10,6 +10,7 @@ note
 		- Row and column access
 		- CSV generation from data
 		- UTF-8 BOM support for Excel compatibility
+		- Excel sep= directive support (parsing and generation)
 		- Lenient parsing mode with error collection
 		- Row-by-row iteration for large files
 		- Null value handling
@@ -97,7 +98,7 @@ feature -- Parsing
 
 	parse (a_input: STRING)
 			-- Parse CSV data from `a_input'.
-			-- Automatically handles UTF-8 BOM if present.
+			-- Automatically handles UTF-8 BOM and Excel sep= directive if present.
 		require
 			input_not_void: a_input /= Void
 		local
@@ -116,6 +117,9 @@ feature -- Parsing
 
 			-- Strip BOM if present
 			l_input := strip_bom (a_input)
+
+			-- Handle Excel sep= directive if present
+			l_input := handle_sep_directive (l_input)
 
 			-- Normalize line endings
 			l_input := l_input.twin
@@ -518,6 +522,36 @@ feature -- Generation
 			has_bom: Result.count >= 3 implies (Result [1].code = 0xEF and Result [2].code = 0xBB and Result [3].code = 0xBF)
 		end
 
+	to_csv_excel: STRING
+			-- Generate CSV string with sep= directive and BOM for Excel.
+			-- Format: sep=<delimiter> on first line, followed by BOM and CSV data.
+			-- This ensures Excel correctly interprets the delimiter.
+		do
+			create Result.make (rows.count * 50 + 10)
+			Result.append ("sep=")
+			Result.append_character (delimiter)
+			Result.append_character ('%N')
+			Result.append (Utf8_bom)
+			Result.append (to_csv)
+		ensure
+			result_not_void: Result /= Void
+			has_sep_directive: Result.starts_with ("sep=")
+		end
+
+	to_csv_excel_no_bom: STRING
+			-- Generate CSV string with sep= directive for Excel (no BOM).
+			-- Format: sep=<delimiter> on first line, followed by CSV data.
+		do
+			create Result.make (rows.count * 50 + 10)
+			Result.append ("sep=")
+			Result.append_character (delimiter)
+			Result.append_character ('%N')
+			Result.append (to_csv)
+		ensure
+			result_not_void: Result /= Void
+			has_sep_directive: Result.starts_with ("sep=")
+		end
+
 	add_data_row (a_fields: ARRAY [STRING])
 			-- Add a data row.
 		require
@@ -672,7 +706,73 @@ feature -- BOM Support
 			bom_stripped: not has_bom (Result)
 		end
 
+feature -- Excel sep= Directive
+
+	has_sep_directive (a_input: STRING): BOOLEAN
+			-- Does `a_input' start with Excel sep= directive?
+			-- Format: sep=<char> on first line.
+		require
+			input_not_void: a_input /= Void
+		local
+			l_input: STRING
+		do
+			-- Strip BOM first if present
+			l_input := strip_bom (a_input)
+			Result := l_input.count >= 5 and then l_input.starts_with ("sep=")
+		end
+
+	extract_sep_delimiter (a_input: STRING): CHARACTER
+			-- Extract delimiter from sep= directive.
+			-- Returns comma if directive is malformed.
+		require
+			input_not_void: a_input /= Void
+			has_directive: has_sep_directive (a_input)
+		local
+			l_input: STRING
+		do
+			l_input := strip_bom (a_input)
+			if l_input.count >= 5 then
+				Result := l_input [5]
+			else
+				Result := ','
+			end
+		end
+
 feature {NONE} -- Implementation
+
+	handle_sep_directive (a_input: STRING): STRING
+			-- Handle Excel sep= directive if present.
+			-- Sets delimiter from directive and returns input without directive line.
+		require
+			input_not_void: a_input /= Void
+		local
+			l_first_newline: INTEGER
+		do
+			if has_sep_directive (a_input) then
+				-- Extract and set delimiter
+				delimiter := extract_sep_delimiter (a_input)
+
+				-- Find first newline and skip the directive line
+				l_first_newline := a_input.index_of ('%N', 1)
+				if l_first_newline = 0 then
+					l_first_newline := a_input.index_of ('%R', 1)
+				end
+
+				if l_first_newline > 0 and l_first_newline < a_input.count then
+					Result := a_input.substring (l_first_newline + 1, a_input.count)
+					-- Strip BOM from remaining content if present
+					Result := strip_bom (Result)
+				else
+					create Result.make_empty
+				end
+			else
+				Result := a_input
+			end
+		ensure
+			result_not_void: Result /= Void
+		end
+
+feature {NONE} -- Implementation (Data)
 
 	rows: ARRAYED_LIST [ARRAYED_LIST [STRING]]
 			-- All rows including header.

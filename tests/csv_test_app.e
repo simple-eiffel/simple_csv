@@ -91,6 +91,15 @@ feature {NONE} -- Initialization
 			run_test (agent tests.test_set_null_representation, "test_set_null_representation")
 			run_test (agent tests.test_is_null_by_name, "test_is_null_by_name")
 
+			-- Excel sep= Directive
+			run_test (agent tests.test_has_sep_directive, "test_has_sep_directive")
+			run_test (agent tests.test_extract_sep_delimiter, "test_extract_sep_delimiter")
+			run_test (agent tests.test_parse_sep_directive_semicolon, "test_parse_sep_directive_semicolon")
+			run_test (agent tests.test_parse_sep_directive_tab, "test_parse_sep_directive_tab")
+			run_test (agent tests.test_to_csv_excel, "test_to_csv_excel")
+			run_test (agent tests.test_to_csv_excel_no_bom, "test_to_csv_excel_no_bom")
+			run_test (agent tests.test_roundtrip_sep_directive, "test_roundtrip_sep_directive")
+
 			print ("%N========================%N")
 			print ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
 
