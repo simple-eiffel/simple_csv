@@ -96,7 +96,9 @@ feature {NONE} -- Initialization
 
 feature -- Parsing
 
-	parse (a_input: STRING)
+	parse,
+	load,
+	from_string (a_input: STRING)
 			-- Parse CSV data from `a_input'.
 			-- Automatically handles UTF-8 BOM and Excel sep= directive if present.
 		require
@@ -198,7 +200,10 @@ feature -- Parsing
 			header_map_built: (has_header and rows.count > 0) implies header_map.count = rows.first.count
 		end
 
-	parse_file (a_path: STRING)
+	parse_file,
+	load_file,
+	read_file,
+	from_file (a_path: STRING)
 			-- Parse CSV data from file at `a_path'.
 		require
 			path_not_void: a_path /= Void
@@ -243,7 +248,9 @@ feature -- Access
 			non_negative: Result >= 0
 		end
 
-	field (a_row, a_column: INTEGER): STRING
+	field,
+	cell,
+	value_at (a_row, a_column: INTEGER): STRING
 			-- Get field at `a_row', `a_column' (1-based).
 			-- Row 1 is first data row (after header if present).
 		require
@@ -272,7 +279,9 @@ feature -- Access
 			Result := field (a_row, l_col)
 		end
 
-	row (a_row: INTEGER): ARRAYED_LIST [STRING]
+	row,
+	get_row,
+	row_at (a_row: INTEGER): ARRAYED_LIST [STRING]
 			-- Get all fields in `a_row' (1-based data row).
 		require
 			valid_row: a_row >= 1 and a_row <= row_count
@@ -459,7 +468,10 @@ feature -- Query
 
 feature -- Generation
 
-	to_csv: STRING
+	to_csv,
+	as_string,
+	render,
+	generate: STRING
 			-- Generate CSV string from current data.
 		local
 			i, j: INTEGER
@@ -530,7 +542,9 @@ feature -- Generation
 			has_sep_directive: Result.starts_with ("sep=")
 		end
 
-	add_data_row (a_fields: ARRAY [STRING])
+	add_data_row,
+	append_row,
+	append_data (a_fields: ARRAY [STRING])
 			-- Add a data row.
 		require
 			fields_not_void: a_fields /= Void
