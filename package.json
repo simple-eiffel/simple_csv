@@ -1,0 +1,9 @@
+{
+  "name": "simple_csv",
+  "version": "0.1.0",
+  "description": "Simple CSV - Lightweight CSV parsing and generation for Eiffel",
+  "author": "Larry Rix",
+  "license": "MIT",
+  "category": "data-formats",
+  "keywords": ["csv", "parser", "tabular", "spreadsheet"]
+}
