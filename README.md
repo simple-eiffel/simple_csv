@@ -30,7 +30,54 @@ Set environment variable:
 SIMPLE_CSV=D:\prod\simple_csv
 ```
 
-## Usage
+## Quick Start (Zero-Configuration)
+
+Use `SIMPLE_CSV_QUICK` for the simplest possible CSV operations:
+
+```eiffel
+local
+    csv: SIMPLE_CSV_QUICK
+    rows: ARRAYED_LIST [ARRAYED_LIST [STRING]]
+do
+    create csv.make
+
+    -- Read CSV file to list of rows
+    rows := csv.read ("data.csv")
+
+    -- Parse CSV string
+    rows := csv.parse ("name,age%NAlice,30%NBob,25")
+
+    -- Write rows to file
+    csv.write ("output.csv", rows)
+
+    -- Convert rows to CSV string
+    print (csv.to_csv (rows))
+
+    -- Read with headers (returns list of maps)
+    across csv.read_with_headers ("data.csv") as rec loop
+        print (rec ["name"] + " is " + rec ["age"])
+    end
+
+    -- Build rows easily
+    rows := csv.rows_from_arrays (<<
+        <<"Alice", "30", "NYC">>,
+        <<"Bob", "25", "LA">>
+    >>)
+
+    -- Write with headers
+    csv.write_with_headers ("output.csv", <<"name", "age", "city">>, rows)
+
+    -- TSV (tab-separated)
+    csv.use_tabs
+    rows := csv.read ("data.tsv")
+
+    -- European CSV (semicolon-separated)
+    csv.use_semicolons
+    rows := csv.read ("european.csv")
+end
+```
+
+## Standard API (Full Control)
 
 ### Basic Parsing
 

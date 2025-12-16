@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIMPLE_CSV_QUICK - Zero-Configuration CSV</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <img src="images/logo.png" alt="simple_* logo" class="logo">
+        </div>
+        <h1>SIMPLE_CSV_QUICK</h1>
+        <p class="tagline">Zero-Configuration CSV for Beginners</p>
+        <div class="badges">
+            <span class="badge badge-version">v1.0.0</span>
+            <span class="badge badge-license">MIT</span>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#api">API Reference</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>
+                <strong>SIMPLE_CSV_QUICK</strong> provides one-liner CSV read/write operations.
+                Supports CSV, TSV, and European-style semicolon-delimited files.
+            </p>
+            <p>For column-by-name access and RFC 4180 details, use SIMPLE_CSV directly.</p>
+        </section>
+
+        <section id="quick-start">
+            <h2>Quick Start</h2>
+<pre><code><span class="keyword">local</span>
+    csv: <span class="type">SIMPLE_CSV_QUICK</span>
+    rows: <span class="type">ARRAYED_LIST</span> [<span class="type">ARRAYED_LIST</span> [<span class="type">STRING</span>]]
+<span class="keyword">do</span>
+    <span class="keyword">create</span> csv.make
+
+    <span class="comment">-- Read CSV file to list of rows</span>
+    rows := csv.read (<span class="string">"data.csv"</span>)
+
+    <span class="comment">-- Parse CSV string</span>
+    rows := csv.parse (<span class="string">"name,age%NAlice,30%NBob,25"</span>)
+
+    <span class="comment">-- Write rows to file</span>
+    csv.write (<span class="string">"output.csv"</span>, rows)
+
+    <span class="comment">-- Convert rows to CSV string</span>
+    print (csv.to_csv (rows))
+
+    <span class="comment">-- Read with headers (returns list of maps)</span>
+    <span class="keyword">across</span> csv.read_with_headers (<span class="string">"data.csv"</span>) <span class="keyword">as</span> rec <span class="keyword">loop</span>
+        print (rec [<span class="string">"name"</span>] + <span class="string">" is "</span> + rec [<span class="string">"age"</span>])
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Build rows easily</span>
+    rows := csv.rows_from_arrays (&lt;&lt;
+        &lt;&lt;<span class="string">"Alice"</span>, <span class="string">"30"</span>, <span class="string">"NYC"</span>&gt;&gt;,
+        &lt;&lt;<span class="string">"Bob"</span>, <span class="string">"25"</span>, <span class="string">"LA"</span>&gt;&gt;
+    &gt;&gt;)
+
+    <span class="comment">-- Write with headers</span>
+    csv.write_with_headers (<span class="string">"output.csv"</span>, &lt;&lt;<span class="string">"name"</span>, <span class="string">"age"</span>, <span class="string">"city"</span>&gt;&gt;, rows)
+
+    <span class="comment">-- TSV (tab-separated)</span>
+    csv.use_tabs
+    rows := csv.read (<span class="string">"data.tsv"</span>)
+
+    <span class="comment">-- European CSV (semicolon-separated)</span>
+    csv.use_semicolons
+    rows := csv.read (<span class="string">"european.csv"</span>)
+<span class="keyword">end</span></code></pre>
+        </section>
+
+        <section id="api">
+            <h2>API Reference</h2>
+
+            <h3>Reading</h3>
+            <table>
+                <tr><th>Feature</th><th>Description</th></tr>
+                <tr><td><code>read (path)</code></td><td>Read CSV file to list of rows</td></tr>
+                <tr><td><code>read_with_headers (path)</code></td><td>Read to list of maps (field name -> value)</td></tr>
+                <tr><td><code>parse (csv_string)</code></td><td>Parse CSV string to rows</td></tr>
+            </table>
+
+            <h3>Writing</h3>
+            <table>
+                <tr><th>Feature</th><th>Description</th></tr>
+                <tr><td><code>write (path, rows)</code></td><td>Write rows to CSV file</td></tr>
+                <tr><td><code>write_with_headers (path, headers, rows)</code></td><td>Write with header row</td></tr>
+                <tr><td><code>to_csv (rows)</code></td><td>Convert rows to CSV string</td></tr>
+            </table>
+
+            <h3>Row Building</h3>
+            <table>
+                <tr><th>Feature</th><th>Description</th></tr>
+                <tr><td><code>row (fields)</code></td><td>Create row from array of fields</td></tr>
+                <tr><td><code>rows_from_arrays (arrays)</code></td><td>Create rows from arrays</td></tr>
+            </table>
+
+            <h3>Configuration</h3>
+            <table>
+                <tr><th>Feature</th><th>Description</th></tr>
+                <tr><td><code>set_delimiter (char)</code></td><td>Set field delimiter</td></tr>
+                <tr><td><code>use_tabs</code></td><td>Use tab delimiter (TSV)</td></tr>
+                <tr><td><code>use_semicolons</code></td><td>Use semicolon delimiter (European)</td></tr>
+            </table>
+
+            <h3>Utilities</h3>
+            <table>
+                <tr><th>Feature</th><th>Description</th></tr>
+                <tr><td><code>column (rows, index)</code></td><td>Extract single column</td></tr>
+                <tr><td><code>row_count (rows)</code></td><td>Number of rows</td></tr>
+                <tr><td><code>column_count (rows)</code></td><td>Number of columns</td></tr>
+            </table>
+        </section>
+    </main>
+
+    <footer>
+        <p>Part of the <a href="https://github.com/simple-eiffel">Simple Eiffel</a> ecosystem</p>
+    </footer>
+</body>
+</html>
