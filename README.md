@@ -19,15 +19,15 @@ Lightweight RFC 4180 compliant CSV parsing and generation library for Eiffel.
 
 ## Installation
 
+Set the ecosystem environment variable (one-time setup for all simple_* libraries):
+```
+SIMPLE_EIFFEL=D:\prod
+```
+
 Add to your ECF:
 
 ```xml
-<library name="simple_csv" location="$SIMPLE_CSV\simple_csv.ecf"/>
-```
-
-Set environment variable:
-```
-SIMPLE_CSV=D:\prod\simple_csv
+<library name="simple_csv" location="$SIMPLE_EIFFEL/simple_csv/simple_csv.ecf"/>
 ```
 
 ## Quick Start (Zero-Configuration)
