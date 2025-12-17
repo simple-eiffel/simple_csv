@@ -36,7 +36,6 @@ feature {NONE} -- Initialization
 			-- Create quick CSV facade.
 		do
 			create csv.make
-			create logger.make ("csv_quick")
 			delimiter := ','
 			has_header := True
 		ensure
@@ -80,14 +79,15 @@ feature -- Reading
 			-- Read CSV file to list of rows (each row is list of fields).
 		require
 			path_not_empty: not a_path.is_empty
+		local
+			i: INTEGER
 		do
-			logger.debug_log ("Reading CSV: " + a_path)
-			csv.read_file (a_path)
-			Result := csv.rows
-			if Result = Void then
-				create Result.make (0)
+			csv.parse_file (a_path)
+			create Result.make (csv.row_count)
+			from i := 1 until i > csv.row_count loop
+				Result.extend (csv.row (i))
+				i := i + 1
 			end
-			logger.debug_log ("Read " + Result.count.out + " rows")
 		ensure
 			result_exists: Result /= Void
 		end
@@ -98,41 +98,41 @@ feature -- Reading
 		require
 			path_not_empty: not a_path.is_empty
 		local
-			l_rows: ARRAYED_LIST [ARRAYED_LIST [STRING]]
 			l_headers: ARRAYED_LIST [STRING]
 			l_map: STRING_TABLE [STRING]
-			i: INTEGER
+			i, j: INTEGER
 		do
-			csv.read_file (a_path)
-			l_rows := csv.rows
-			create Result.make (l_rows.count)
-			if l_rows.count > 0 then
-				l_headers := l_rows.first
-				from i := 2 until i > l_rows.count loop
-					create l_map.make (l_headers.count)
-					across l_headers as h loop
-						if l_rows [i].valid_index (h.cursor_index) then
-							l_map.put (l_rows [i] [h.cursor_index], h)
-						end
+			create csv.make_with_header
+			csv.parse_file (a_path)
+			create Result.make (csv.row_count)
+			l_headers := csv.headers
+			from i := 1 until i > csv.row_count loop
+				create l_map.make (l_headers.count)
+				from j := 1 until j > l_headers.count loop
+					if j <= csv.column_count then
+						l_map.put (csv.field (i, j), l_headers [j])
 					end
-					Result.extend (l_map)
-					i := i + 1
+					j := j + 1
 				end
+				Result.extend (l_map)
+				i := i + 1
 			end
 		ensure
 			result_exists: Result /= Void
 		end
 
-	parse (a_csv: STRING): ARRAYED_LIST [ARRAYED_LIST [STRING]]
+	parse (a_csv_string: STRING): ARRAYED_LIST [ARRAYED_LIST [STRING]]
 			-- Parse CSV string to list of rows.
 		require
-			csv_not_empty: not a_csv.is_empty
+			csv_not_empty: not a_csv_string.is_empty
+		local
+			i: INTEGER
 		do
-			logger.debug_log ("Parsing CSV string (" + a_csv.count.out + " chars)")
-			csv.parse_string (a_csv)
-			Result := csv.rows
-			if Result = Void then
-				create Result.make (0)
+			csv.parse (a_csv_string)
+			create Result.make (csv.row_count)
+			from i := 1 until i > csv.row_count loop
+				Result.extend (csv.row (i))
+				i := i + 1
 			end
 		ensure
 			result_exists: Result /= Void
@@ -145,10 +145,12 @@ feature -- Writing
 		require
 			path_not_empty: not a_path.is_empty
 			rows_not_void: a_rows /= Void
+		local
+			l_file: PLAIN_TEXT_FILE
 		do
-			logger.debug_log ("Writing CSV: " + a_path + " (" + a_rows.count.out + " rows)")
-			csv.set_rows (a_rows)
-			csv.write_file (a_path)
+			create l_file.make_create_read_write (a_path)
+			l_file.put_string (to_csv (a_rows))
+			l_file.close
 		end
 
 	write_with_headers (a_path: STRING; a_headers: ARRAY [STRING]; a_rows: ARRAYED_LIST [ARRAYED_LIST [STRING]])
@@ -167,8 +169,7 @@ feature -- Writing
 			across a_rows as r loop
 				l_all_rows.extend (r)
 			end
-			csv.set_rows (l_all_rows)
-			csv.write_file (a_path)
+			write (a_path, l_all_rows)
 		end
 
 	to_csv (a_rows: ARRAYED_LIST [ARRAYED_LIST [STRING]]): STRING
@@ -176,11 +177,11 @@ feature -- Writing
 		require
 			rows_not_void: a_rows /= Void
 		do
-			csv.set_rows (a_rows)
-			Result := csv.to_string
-			if Result = Void then
-				Result := ""
+			csv.clear
+			across a_rows as r loop
+				csv.add_data_row (r.to_array)
 			end
+			Result := csv.to_csv
 		ensure
 			result_exists: Result /= Void
 		end
@@ -259,13 +260,7 @@ feature -- Advanced Access
 	csv: SIMPLE_CSV
 			-- Access underlying CSV handler for advanced operations.
 
-feature {NONE} -- Implementation
-
-	logger: SIMPLE_LOGGER
-			-- Logger for debugging.
-
 invariant
 	csv_exists: csv /= Void
-	logger_exists: logger /= Void
 
 end
