@@ -834,11 +834,11 @@ feature {NONE} -- Implementation (Data)
 			if needs_quotes then
 				create Result.make (a_field.count + 10)
 				Result.append_character (quote_char)
-				across a_field as c loop
-					if c.item = quote_char then
+				across a_field as ic_c loop
+					if ic_c.item = quote_char then
 						Result.append_character (quote_char)
 					end
-					Result.append_character (c.item)
+					Result.append_character (ic_c.item)
 				end
 				Result.append_character (quote_char)
 			else

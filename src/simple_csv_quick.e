@@ -166,8 +166,8 @@ feature -- Writing
 			create l_all_rows.make (a_rows.count + 1)
 			create l_header_row.make_from_array (a_headers)
 			l_all_rows.extend (l_header_row)
-			across a_rows as r loop
-				l_all_rows.extend (r)
+			across a_rows as ic_r loop
+				l_all_rows.extend (ic_r)
 			end
 			write (a_path, l_all_rows)
 		end
@@ -178,8 +178,8 @@ feature -- Writing
 			rows_not_void: a_rows /= Void
 		do
 			csv.clear
-			across a_rows as r loop
-				csv.add_data_row (r.to_array)
+			across a_rows as ic_r loop
+				csv.add_data_row (ic_r.to_array)
 			end
 			Result := csv.to_csv
 		ensure
@@ -204,8 +204,8 @@ feature -- Quick Row Building
 			arrays_not_void: a_arrays /= Void
 		do
 			create Result.make (a_arrays.count)
-			across a_arrays as a loop
-				Result.extend (row (a))
+			across a_arrays as ic_a loop
+				Result.extend (row (ic_a))
 			end
 		ensure
 			result_exists: Result /= Void
@@ -220,9 +220,9 @@ feature -- Utility
 			valid_index: a_index >= 1
 		do
 			create Result.make (a_rows.count)
-			across a_rows as r loop
-				if r.valid_index (a_index) then
-					Result.extend (r [a_index])
+			across a_rows as ic_r loop
+				if ic_r.valid_index (a_index) then
+					Result.extend (ic_r [a_index])
 				end
 			end
 		ensure
