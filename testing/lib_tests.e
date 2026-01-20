@@ -787,4 +787,64 @@ feature -- Test: Excel sep= Directive
 			assert_strings_equal ("2", "2", csv2.field (2, 2))
 		end
 
+feature -- Test: Encoding Detection (simple_encoding integration)
+
+	test_detect_encoding
+			-- Test encoding detection.
+		note
+			testing: "covers/{SIMPLE_CSV}.detect_encoding"
+		local
+			csv: SIMPLE_CSV
+			l_enc: STRING
+		do
+			create csv.make
+			l_enc := csv.detect_encoding ("Hello World")
+			assert ("encoding detected", not l_enc.is_empty)
+		end
+
+	test_is_valid_utf8
+			-- Test UTF-8 validation.
+		note
+			testing: "covers/{SIMPLE_CSV}.is_valid_utf8"
+		local
+			csv: SIMPLE_CSV
+		do
+			create csv.make
+			assert ("ascii is valid utf8", csv.is_valid_utf8 ("Hello World"))
+		end
+
+feature -- Test: CSV Mapper (simple_reflection integration)
+
+	test_csv_mapper_object_to_row
+			-- Test converting object to CSV row.
+		note
+			testing: "covers/{SIMPLE_CSV_MAPPER}.object_to_row"
+		local
+			mapper: SIMPLE_CSV_MAPPER
+			l_row: ARRAYED_LIST [STRING]
+		do
+			create mapper.make
+			-- Use a simple test object
+			l_row := mapper.object_to_row (create {TEST_PERSON}.make ("John", 30))
+			assert ("row has fields", l_row.count > 0)
+		end
+
+	test_csv_mapper_objects_to_csv
+			-- Test converting objects to CSV.
+		note
+			testing: "covers/{SIMPLE_CSV_MAPPER}.objects_to_csv"
+		local
+			mapper: SIMPLE_CSV_MAPPER
+			objects: ARRAYED_LIST [ANY]
+			csv: SIMPLE_CSV
+		do
+			create mapper.make
+			create objects.make (2)
+			objects.extend (create {TEST_PERSON}.make ("John", 30))
+			objects.extend (create {TEST_PERSON}.make ("Jane", 25))
+			csv := mapper.objects_to_csv (objects)
+			assert ("has header", csv.has_header)
+			assert_integers_equal ("2 data rows", 2, csv.row_count)
+		end
+
 end

@@ -100,6 +100,14 @@ feature {NONE} -- Initialization
 			run_test (agent tests.test_to_csv_excel_no_bom, "test_to_csv_excel_no_bom")
 			run_test (agent tests.test_roundtrip_sep_directive, "test_roundtrip_sep_directive")
 
+			-- Encoding Detection (simple_encoding integration)
+			run_test (agent tests.test_detect_encoding, "test_detect_encoding")
+			run_test (agent tests.test_is_valid_utf8, "test_is_valid_utf8")
+
+			-- CSV Mapper (simple_reflection integration)
+			run_test (agent tests.test_csv_mapper_object_to_row, "test_csv_mapper_object_to_row")
+			run_test (agent tests.test_csv_mapper_objects_to_csv, "test_csv_mapper_objects_to_csv")
+
 			print ("%N========================%N")
 			print ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
 

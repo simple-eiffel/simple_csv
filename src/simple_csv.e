@@ -676,25 +676,59 @@ feature -- BOM Support
 			-- Does `a_input' start with UTF-8 BOM?
 		require
 			input_not_void: a_input /= Void
+		local
+			l_detector: SIMPLE_ENCODING_DETECTOR
 		do
-			Result := a_input.count >= 3 and then
-					  (a_input [1].code = 0xEF and
-					   a_input [2].code = 0xBB and
-					   a_input [3].code = 0xBF)
+			create l_detector.make
+			Result := l_detector.has_utf8_bom (a_input)
 		end
 
 	strip_bom (a_input: STRING): STRING
 			-- Return `a_input' with UTF-8 BOM removed if present.
 		require
 			input_not_void: a_input /= Void
+		local
+			l_detector: SIMPLE_ENCODING_DETECTOR
 		do
-			if has_bom (a_input) then
+			create l_detector.make
+			if l_detector.has_utf8_bom (a_input) then
 				Result := a_input.substring (4, a_input.count)
 			else
 				Result := a_input
 			end
 		ensure
 			bom_stripped: not has_bom (Result)
+		end
+
+feature -- Encoding Detection (simple_encoding integration)
+
+	detect_encoding (a_input: STRING): STRING
+			-- Detect encoding of `a_input'.
+			-- Returns "UTF-8", "ASCII", "LATIN1", etc.
+		require
+			input_not_void: a_input /= Void
+		local
+			l_detector: SIMPLE_ENCODING_DETECTOR
+		do
+			create l_detector.make
+			if attached l_detector.detect_encoding (a_input) as l_enc then
+				Result := l_enc.to_string_8
+			else
+				Result := "UNKNOWN"
+			end
+		ensure
+			result_not_empty: not Result.is_empty
+		end
+
+	is_valid_utf8 (a_input: STRING): BOOLEAN
+			-- Is `a_input' valid UTF-8?
+		require
+			input_not_void: a_input /= Void
+		local
+			l_detector: SIMPLE_ENCODING_DETECTOR
+		do
+			create l_detector.make
+			Result := l_detector.is_valid_utf8 (a_input)
 		end
 
 feature -- Excel sep= Directive
