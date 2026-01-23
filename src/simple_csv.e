@@ -64,6 +64,7 @@ feature {NONE} -- Initialization
 			rows_empty: rows.is_empty
 			header_map_empty: header_map.is_empty
 			not_lenient: not lenient_mode
+			model_empty: rows_model.is_empty
 		end
 
 	make_with_header
@@ -77,6 +78,7 @@ feature {NONE} -- Initialization
 			has_header_set: has_header
 			rows_empty: rows.is_empty
 			header_map_empty: header_map.is_empty
+			model_empty: rows_model.is_empty
 		end
 
 	make_with_delimiter (a_delimiter: CHARACTER)
@@ -94,6 +96,74 @@ feature {NONE} -- Initialization
 			header_map_empty: header_map.is_empty
 		end
 
+feature -- Model Queries (MML)
+
+	rows_model: MML_SEQUENCE [MML_SEQUENCE [STRING]]
+			-- Mathematical model of all rows as sequence of sequences.
+			-- Each inner sequence represents one row's fields.
+		local
+			l_outer: MML_SEQUENCE [MML_SEQUENCE [STRING]]
+			l_inner: MML_SEQUENCE [STRING]
+			i, j: INTEGER
+		do
+			create l_outer
+			from i := 1 until i > rows.count loop
+				create l_inner
+				from j := 1 until j > rows [i].count loop
+					l_inner := l_inner & rows [i] [j]
+					j := j + 1
+				end
+				l_outer := l_outer & l_inner
+				i := i + 1
+			end
+			Result := l_outer
+		ensure
+			count_matches: Result.count = rows.count
+		end
+
+	header_map_model: MML_MAP [STRING, INTEGER]
+			-- Mathematical model of header name to column index mapping.
+			-- Keys are lowercase header names, values are 1-based column indices.
+		local
+			l_map: MML_MAP [STRING, INTEGER]
+		do
+			create l_map
+			across header_map as ic loop
+				-- header_map is HASH_TABLE [INTEGER, STRING] (value, key order)
+				l_map := l_map.updated (@ic.key, ic.item)
+			end
+			Result := l_map
+		ensure
+			count_matches: Result.count = header_map.count
+		end
+
+	data_rows_model: MML_SEQUENCE [MML_SEQUENCE [STRING]]
+			-- Mathematical model of data rows only (excludes header if present).
+		do
+			if has_header and rows_model.count > 0 then
+				Result := rows_model.but_first
+			else
+				Result := rows_model
+			end
+		ensure
+			count_matches: Result.count = row_count
+		end
+
+	column_names_model: MML_SET [STRING]
+			-- Set of all column names (lowercase).
+		local
+			l_set: MML_SET [STRING]
+		do
+			create l_set
+			across header_map as ic loop
+				-- header_map is HASH_TABLE [INTEGER, STRING] (value, key order)
+				l_set := l_set & @ic.key
+			end
+			Result := l_set
+		ensure
+			count_matches: Result.count = header_map.count
+		end
+
 feature -- Parsing
 
 	parse,
@@ -101,8 +171,6 @@ feature -- Parsing
 	from_string (a_input: STRING)
 			-- Parse CSV data from `a_input'.
 			-- Automatically handles UTF-8 BOM and Excel sep= directive if present.
-		require
-			input_not_void: a_input /= Void
 		local
 			l_row: ARRAYED_LIST [STRING]
 			l_field: STRING
@@ -198,6 +266,7 @@ feature -- Parsing
 		ensure
 			header_mode_unchanged: has_header = old has_header
 			header_map_built: (has_header and rows.count > 0) implies header_map.count = rows.first.count
+			model_consistent: rows_model.count = rows.count
 		end
 
 	parse_file,
@@ -206,7 +275,6 @@ feature -- Parsing
 	from_file (a_path: STRING)
 			-- Parse CSV data from file at `a_path'.
 		require
-			path_not_void: a_path /= Void
 			path_not_empty: not a_path.is_empty
 		local
 			l_file: PLAIN_TEXT_FILE
@@ -236,6 +304,7 @@ feature -- Access
 			end
 		ensure
 			non_negative: Result >= 0
+			model_consistent: Result = data_rows_model.count
 		end
 
 	column_count: INTEGER
@@ -246,6 +315,7 @@ feature -- Access
 			end
 		ensure
 			non_negative: Result >= 0
+			model_consistent: rows.count > 0 implies Result = rows_model [1].count
 		end
 
 	field,
@@ -442,28 +512,30 @@ feature -- Query
 
 	has_column (a_name: STRING): BOOLEAN
 			-- Does a column with `a_name' exist?
-		require
-			name_not_void: a_name /= Void
 		do
 			Result := header_map.has (a_name.as_lower)
+		ensure
+			model_consistent: Result = column_names_model [a_name.as_lower]
 		end
 
 	column_index (a_name: STRING): INTEGER
 			-- Get index of column named `a_name' (1-based).
 		require
-			name_not_void: a_name /= Void
 			has_column: has_column (a_name)
 		do
 			Result := header_map [a_name.as_lower]
 		ensure
 			valid_lower_bound: Result >= 1
 			valid_upper_bound: Result <= column_count
+			model_consistent: Result = header_map_model [a_name.as_lower]
 		end
 
 	is_empty: BOOLEAN
 			-- Is CSV data empty?
 		do
 			Result := row_count = 0
+		ensure
+			model_consistent: Result = data_rows_model.is_empty
 		end
 
 feature -- Generation
@@ -547,7 +619,6 @@ feature -- Generation
 	append_data (a_fields: ARRAY [STRING])
 			-- Add a data row.
 		require
-			fields_not_void: a_fields /= Void
 			fields_not_empty: a_fields.count > 0
 		local
 			l_row: ARRAYED_LIST [STRING]
@@ -577,7 +648,6 @@ feature -- Generation
 			-- If has_header is already True, replaces existing header.
 			-- If has_header is False, inserts header at front preserving existing data.
 		require
-			headers_not_void: a_headers /= Void
 			headers_not_empty: a_headers.count > 0
 		local
 			l_row: ARRAYED_LIST [STRING]
@@ -624,6 +694,8 @@ feature -- Generation
 			rows_empty: rows.is_empty
 			header_map_empty: header_map.is_empty
 			errors_cleared: parse_errors.is_empty
+			model_empty: rows_model.is_empty
+			header_model_empty: header_map_model.is_empty
 		end
 
 feature -- Settings
@@ -674,8 +746,6 @@ feature -- BOM Support
 
 	has_bom (a_input: STRING): BOOLEAN
 			-- Does `a_input' start with UTF-8 BOM?
-		require
-			input_not_void: a_input /= Void
 		local
 			l_detector: SIMPLE_ENCODING_DETECTOR
 		do
@@ -685,8 +755,6 @@ feature -- BOM Support
 
 	strip_bom (a_input: STRING): STRING
 			-- Return `a_input' with UTF-8 BOM removed if present.
-		require
-			input_not_void: a_input /= Void
 		local
 			l_detector: SIMPLE_ENCODING_DETECTOR
 		do
@@ -705,8 +773,6 @@ feature -- Encoding Detection (simple_encoding integration)
 	detect_encoding (a_input: STRING): STRING
 			-- Detect encoding of `a_input'.
 			-- Returns "UTF-8", "ASCII", "LATIN1", etc.
-		require
-			input_not_void: a_input /= Void
 		local
 			l_detector: SIMPLE_ENCODING_DETECTOR
 		do
@@ -722,8 +788,6 @@ feature -- Encoding Detection (simple_encoding integration)
 
 	is_valid_utf8 (a_input: STRING): BOOLEAN
 			-- Is `a_input' valid UTF-8?
-		require
-			input_not_void: a_input /= Void
 		local
 			l_detector: SIMPLE_ENCODING_DETECTOR
 		do
@@ -736,8 +800,6 @@ feature -- Excel sep= Directive
 	has_sep_directive (a_input: STRING): BOOLEAN
 			-- Does `a_input' start with Excel sep= directive?
 			-- Format: sep=<char> on first line.
-		require
-			input_not_void: a_input /= Void
 		local
 			l_input: STRING
 		do
@@ -750,7 +812,6 @@ feature -- Excel sep= Directive
 			-- Extract delimiter from sep= directive.
 			-- Returns comma if directive is malformed.
 		require
-			input_not_void: a_input /= Void
 			has_directive: has_sep_directive (a_input)
 		local
 			l_input: STRING
@@ -768,8 +829,6 @@ feature {NONE} -- Implementation
 	handle_sep_directive (a_input: STRING): STRING
 			-- Handle Excel sep= directive if present.
 			-- Sets delimiter from directive and returns input without directive line.
-		require
-			input_not_void: a_input /= Void
 		local
 			l_first_newline: INTEGER
 		do
@@ -805,8 +864,6 @@ feature {NONE} -- Implementation (Data)
 
 	add_row (a_row: ARRAYED_LIST [STRING])
 			-- Add a row to the data.
-		require
-			row_not_void: a_row /= Void
 		do
 			rows.extend (a_row)
 		end
@@ -815,7 +872,6 @@ feature {NONE} -- Implementation (Data)
 			-- Add a row to the data in lenient mode.
 			-- If row has wrong column count, log error and optionally skip.
 		require
-			row_not_void: a_row /= Void
 			lenient: lenient_mode
 		local
 			l_expected: INTEGER
