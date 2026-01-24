@@ -1,0 +1,707 @@
+Eiffel Compilation Manager
+Version 25.02.9.8732 - win64
+
+Degree 6: Examining System
+Degree 5: Parsing Classes
+Degree 4: Analyzing Inheritance
+Degree 3: Checking Types
+Degree 2: Generating Byte Code
+System Recompiled.
+note
+	description: "[
+				Simple CSV - Lightweight CSV parsing and generation for Eiffel.
+		
+				Supports:
+				- RFC 4180 compliant CSV parsing
+				- Quoted fields with embedded commas, quotes, newlines
+				- Custom delimiters (comma, tab, semicolon, etc.)
+				- Header row handling
+				- Row and column access
+				- CSV generation from data
+				- UTF-8 BOM support for Excel compatibility
+				- Excel sep= directive support (parsing and generation)
+				- Lenient parsing mode with error collection
+				- Row-by-row iteration for large files
+				- Null value handling
+		
+				Usage:
+					create csv.make
+					csv.parse ("name,age%Njohn,30")
+					name := csv.field (1, 1)  -- "name"
+		
+					-- Or with headers
+					create csv.make_with_header
+					csv.parse (data)
+					age := csv.field_by_name (2, "age")
+		
+					-- For Excel compatibility
+					excel_output := csv.to_csv_with_bom
+	]"
+	author: "Larry Rix"
+	date: "$Date$"
+	revision: "$Revision$"
+	eis: "name=Documentation", "src=../docs/index.html", "protocol=URI", "tag=documentation"
+	eis: "name=API Reference", "src=../docs/api/simple_csv.html", "protocol=URI", "tag=api"
+	eis: "name=RFC 4180", "src=https://datatracker.ietf.org/doc/html/rfc4180", "protocol=URI", "tag=specification"
+
+class interface
+	SIMPLE_CSV
+
+create 
+	make
+			-- Initialize CSV parser with default comma delimiter.
+		ensure
+			comma_delimiter: delimiter = ','
+			default_quote: quote_char = '"'
+			no_header: not has_header
+			rows_empty: rows.is_empty
+			header_map_empty: header_map.is_empty
+			not_lenient: not lenient_mode
+			model_empty: rows_model.is_empty
+
+	make_with_header
+			-- Initialize CSV parser expecting first row as header.
+		ensure
+			comma_delimiter: delimiter = ','
+			default_quote: quote_char = '"'
+			has_header_set: has_header
+			rows_empty: rows.is_empty
+			header_map_empty: header_map.is_empty
+			model_empty: rows_model.is_empty
+
+	make_with_delimiter (a_delimiter: CHARACTER_8)
+			-- Initialize CSV parser with custom `a_delimiter`.
+		require
+			valid_delimiter: a_delimiter /= '%N' and a_delimiter /= '%R'
+		ensure
+			delimiter_set: delimiter = a_delimiter
+			default_quote: quote_char = '"'
+			no_header: not has_header
+			rows_empty: rows.is_empty
+			header_map_empty: header_map.is_empty
+
+feature -- Access
+
+	cell (a_row, a_column: INTEGER_32): STRING_8
+			-- Get field at `a_row`, `a_column` (1-based).
+			-- Row 1 is first data row (after header if present).
+			-- Was declared in {SIMPLE_CSV} as synonym of `field` and `value_at`.
+		require
+			valid_row: a_row >= 1 and a_row <= row_count
+			valid_column: a_column >= 1 and a_column <= column_count
+
+	column (a_column: INTEGER_32): ARRAYED_LIST [STRING_8]
+			-- Get all values in `a_column` (1-based).
+		require
+			valid_column: a_column >= 1 and a_column <= column_count
+		ensure
+			correct_count: Result.count = row_count
+
+	column_by_name (a_column_name: STRING_8): ARRAYED_LIST [STRING_8]
+			-- Get all values in column by name.
+		require
+			has_header: has_header
+			valid_column_name: has_column (a_column_name)
+
+	column_count: INTEGER_32
+			-- Number of columns (from first row).
+		ensure
+			non_negative: Result >= 0
+			model_consistent: rows.count > 0 implies Result = rows_model [1].count
+
+	field (a_row, a_column: INTEGER_32): STRING_8
+			-- Get field at `a_row`, `a_column` (1-based).
+			-- Row 1 is first data row (after header if present).
+			-- Was declared in {SIMPLE_CSV} as synonym of `cell` and `value_at`.
+		require
+			valid_row: a_row >= 1 and a_row <= row_count
+			valid_column: a_column >= 1 and a_column <= column_count
+
+	field_by_name (a_row: INTEGER_32; a_column_name: STRING_8): STRING_8
+			-- Get field at `a_row` by column name.
+		require
+			has_header: has_header
+			valid_row: a_row >= 1 and a_row <= row_count
+			valid_column_name: has_column (a_column_name)
+
+	generating_type: TYPE [detachable SIMPLE_CSV]
+			-- Type of current object
+			-- (type of which it is a direct instance)
+			-- (from ANY)
+		ensure -- from ANY
+			generating_type_not_void: Result /= Void
+
+	generator: STRING_8
+			-- Name of current object's generating class
+			-- (base class of the type of which it is a direct instance)
+			-- (from ANY)
+		ensure -- from ANY
+			generator_not_void: Result /= Void
+			generator_not_empty: not Result.is_empty
+
+	get_row (a_row: INTEGER_32): ARRAYED_LIST [STRING_8]
+			-- Get all fields in `a_row` (1-based data row).
+			-- Was declared in {SIMPLE_CSV} as synonym of `row` and `row_at`.
+		require
+			valid_row: a_row >= 1 and a_row <= row_count
+
+	headers: ARRAYED_LIST [STRING_8]
+			-- Get header row names.
+		require
+			has_header: has_header
+
+	row (a_row: INTEGER_32): ARRAYED_LIST [STRING_8]
+			-- Get all fields in `a_row` (1-based data row).
+			-- Was declared in {SIMPLE_CSV} as synonym of `get_row` and `row_at`.
+		require
+			valid_row: a_row >= 1 and a_row <= row_count
+
+	row_at (a_row: INTEGER_32): ARRAYED_LIST [STRING_8]
+			-- Get all fields in `a_row` (1-based data row).
+			-- Was declared in {SIMPLE_CSV} as synonym of `row` and `get_row`.
+		require
+			valid_row: a_row >= 1 and a_row <= row_count
+
+	row_count: INTEGER_32
+			-- Number of data rows (excluding header if present).
+		ensure
+			non_negative: Result >= 0
+			model_consistent: Result = data_rows_model.count
+
+	value_at (a_row, a_column: INTEGER_32): STRING_8
+			-- Get field at `a_row`, `a_column` (1-based).
+			-- Row 1 is first data row (after header if present).
+			-- Was declared in {SIMPLE_CSV} as synonym of `field` and `cell`.
+		require
+			valid_row: a_row >= 1 and a_row <= row_count
+			valid_column: a_column >= 1 and a_column <= column_count
+	
+feature -- Comparison
+
+	frozen deep_equal (a: detachable ANY; b: like arg #1): BOOLEAN
+			-- Are `a` and `b` either both void
+			-- or attached to isomorphic object structures?
+			-- (from ANY)
+		ensure -- from ANY
+			instance_free: class
+			shallow_implies_deep: standard_equal (a, b) implies Result
+			both_or_none_void: (a = Void) implies (Result = (b = Void))
+			same_type: (Result and (a /= Void)) implies (b /= Void and then a.same_type (b))
+			symmetric: Result implies deep_equal (b, a)
+
+	frozen equal (a: detachable ANY; b: like arg #1): BOOLEAN
+			-- Are `a` and `b` either both void or attached
+			-- to objects considered equal?
+			-- (from ANY)
+		ensure -- from ANY
+			instance_free: class
+			definition: Result = (a = Void and b = Void) or else ((a /= Void and b /= Void) and then a.is_equal (b))
+
+	frozen is_deep_equal alias "נננ" (other: SIMPLE_CSV): BOOLEAN
+			-- Are `Current` and `other` attached to isomorphic object structures?
+			-- (from ANY)
+		require -- from ANY
+			other_not_void: other /= Void
+		ensure -- from ANY
+			shallow_implies_deep: standard_is_equal (other) implies Result
+			same_type: Result implies same_type (other)
+			symmetric: Result implies other.is_deep_equal (Current)
+
+	is_equal (other: SIMPLE_CSV): BOOLEAN
+			-- Is `other` attached to an object considered
+			-- equal to current object?
+			-- (from ANY)
+		require -- from ANY
+			other_not_void: other /= Void
+		ensure -- from ANY
+			symmetric: Result implies other ~ Current
+			consistent: standard_is_equal (other) implies Result
+
+	frozen standard_equal (a: detachable ANY; b: like arg #1): BOOLEAN
+			-- Are `a` and `b` either both void or attached to
+			-- field-by-field identical objects of the same type?
+			-- Always uses default object comparison criterion.
+			-- (from ANY)
+		ensure -- from ANY
+			instance_free: class
+			definition: Result = (a = Void and b = Void) or else ((a /= Void and b /= Void) and then a.standard_is_equal (b))
+
+	frozen standard_is_equal alias "?" (other: SIMPLE_CSV): BOOLEAN
+			-- Is `other` attached to an object of the same type
+			-- as current object, and field-by-field identical to it?
+			-- (from ANY)
+		require -- from ANY
+			other_not_void: other /= Void
+		ensure -- from ANY
+			same_type: Result implies same_type (other)
+			symmetric: Result implies other.standard_is_equal (Current)
+	
+feature -- Status report
+
+	conforms_to (other: ANY): BOOLEAN
+			-- Does type of current object conform to type
+			-- of `other` (as per Eiffel: The Language, chapter 13)?
+			-- (from ANY)
+		require -- from ANY
+			other_not_void: other /= Void
+
+	same_type (other: ANY): BOOLEAN
+			-- Is type of current object identical to type of `other`?
+			-- (from ANY)
+		require -- from ANY
+			other_not_void: other /= Void
+		ensure -- from ANY
+			definition: Result = (conforms_to (other) and other.conforms_to (Current))
+	
+feature -- Duplication
+
+	copy (other: SIMPLE_CSV)
+			-- Update current object using fields of object attached
+			-- to `other`, so as to yield equal objects.
+			-- (from ANY)
+		require -- from ANY
+			other_not_void: other /= Void
+			type_identity: same_type (other)
+		ensure -- from ANY
+			is_equal: Current ~ other
+
+	frozen deep_copy (other: SIMPLE_CSV)
+			-- Effect equivalent to that of:
+			--		`copy` (`other` . `deep_twin`)
+			-- (from ANY)
+		require -- from ANY
+			other_not_void: other /= Void
+		ensure -- from ANY
+			deep_equal: deep_equal (Current, other)
+
+	frozen deep_twin: SIMPLE_CSV
+			-- New object structure recursively duplicated from Current.
+			-- (from ANY)
+		ensure -- from ANY
+			deep_twin_not_void: Result /= Void
+			deep_equal: deep_equal (Current, Result)
+
+	frozen standard_copy (other: SIMPLE_CSV)
+			-- Copy every field of `other` onto corresponding field
+			-- of current object.
+			-- (from ANY)
+		require -- from ANY
+			other_not_void: other /= Void
+			type_identity: same_type (other)
+		ensure -- from ANY
+			is_standard_equal: standard_is_equal (other)
+
+	frozen standard_twin: SIMPLE_CSV
+			-- New object field-by-field identical to `other`.
+			-- Always uses default copying semantics.
+			-- (from ANY)
+		ensure -- from ANY
+			standard_twin_not_void: Result /= Void
+			equal: standard_equal (Result, Current)
+
+	frozen twin: SIMPLE_CSV
+			-- New object equal to `Current`
+			-- `twin` calls `copy`; to change copying/twinning semantics, redefine `copy`.
+			-- (from ANY)
+		ensure -- from ANY
+			twin_not_void: Result /= Void
+			is_equal: Result ~ Current
+	
+feature -- Basic operations
+
+	frozen default: detachable SIMPLE_CSV
+			-- Default value of object's type
+			-- (from ANY)
+
+	frozen default_pointer: POINTER
+			-- Default value of type `POINTER`
+			-- (Avoid the need to write `p`.`default` for
+			-- some `p` of type `POINTER`.)
+			-- (from ANY)
+		ensure -- from ANY
+			instance_free: class
+
+	default_rescue
+			-- Process exception for routines with no Rescue clause.
+			-- (Default: do nothing.)
+			-- (from ANY)
+
+	frozen do_nothing
+			-- Execute a null action.
+			-- (from ANY)
+		ensure -- from ANY
+			instance_free: class
+	
+feature -- BOM Support
+
+	has_bom (a_input: STRING_8): BOOLEAN
+			-- Does `a_input` start with UTF-8 BOM?
+
+	strip_bom (a_input: STRING_8): STRING_8
+			-- Return `a_input` with UTF-8 BOM removed if present.
+		ensure
+			bom_stripped: not has_bom (Result)
+	
+feature -- Constants
+
+	Utf8_bom: STRING_8
+			-- UTF-8 Byte Order Mark.
+		ensure
+			correct_length: Result.count = 3
+	
+feature -- Encoding Detection (simple_encoding integration)
+
+	detect_encoding (a_input: STRING_8): STRING_8
+			-- Detect encoding of `a_input`.
+			-- Returns "UTF-8", "ASCII", "LATIN1", etc.
+		ensure
+			result_not_empty: not Result.is_empty
+
+	is_valid_utf8 (a_input: STRING_8): BOOLEAN
+			-- Is `a_input` valid UTF-8?
+	
+feature -- Excel sep= Directive
+
+	extract_sep_delimiter (a_input: STRING_8): CHARACTER_8
+			-- Extract delimiter from sep= directive.
+			-- Returns comma if directive is malformed.
+		require
+			has_directive: has_sep_directive (a_input)
+
+	has_sep_directive (a_input: STRING_8): BOOLEAN
+			-- Does `a_input` start with Excel sep= directive?
+			-- Format: sep=<char> on first line.
+	
+feature -- Generation
+
+	add_data_row (a_fields: ARRAY [STRING_8])
+			-- Add a data row.
+			-- Was declared in {SIMPLE_CSV} as synonym of `append_row` and `append_data`.
+		require
+			fields_not_empty: a_fields.count > 0
+		ensure
+			row_added: rows.count = old rows.count + 1
+
+	append_data (a_fields: ARRAY [STRING_8])
+			-- Add a data row.
+			-- Was declared in {SIMPLE_CSV} as synonym of `add_data_row` and `append_row`.
+		require
+			fields_not_empty: a_fields.count > 0
+		ensure
+			row_added: rows.count = old rows.count + 1
+
+	append_row (a_fields: ARRAY [STRING_8])
+			-- Add a data row.
+			-- Was declared in {SIMPLE_CSV} as synonym of `add_data_row` and `append_data`.
+		require
+			fields_not_empty: a_fields.count > 0
+		ensure
+			row_added: rows.count = old rows.count + 1
+
+	as_string: STRING_8
+			-- Generate CSV string from current data.
+			-- Was declared in {SIMPLE_CSV} as synonym of `to_csv`, `render` and `generate`.
+
+	clear
+			-- Clear all data.
+		ensure
+			rows_empty: rows.is_empty
+			header_map_empty: header_map.is_empty
+			errors_cleared: parse_errors.is_empty
+			model_empty: rows_model.is_empty
+			header_model_empty: header_map_model.is_empty
+
+	generate: STRING_8
+			-- Generate CSV string from current data.
+			-- Was declared in {SIMPLE_CSV} as synonym of `to_csv`, `as_string` and `render`.
+
+	render: STRING_8
+			-- Generate CSV string from current data.
+			-- Was declared in {SIMPLE_CSV} as synonym of `to_csv`, `as_string` and `generate`.
+
+	set_headers (a_headers: ARRAY [STRING_8])
+			-- Set header row.
+			-- If has_header is already True, replaces existing header.
+			-- If has_header is False, inserts header at front preserving existing data.
+		require
+			headers_not_empty: a_headers.count > 0
+		ensure
+			has_header_set: has_header
+			header_count_matches: rows.count > 0 implies rows.first.count = a_headers.count
+
+	to_csv: STRING_8
+			-- Generate CSV string from current data.
+			-- Was declared in {SIMPLE_CSV} as synonym of `as_string`, `render` and `generate`.
+
+	to_csv_excel: STRING_8
+			-- Generate CSV string with sep= directive and BOM for Excel.
+			-- Format: sep=<delimiter> on first line, followed by BOM and CSV data.
+			-- This ensures Excel correctly interprets the delimiter.
+		ensure
+			has_sep_directive: Result.starts_with ("sep=")
+
+	to_csv_excel_no_bom: STRING_8
+			-- Generate CSV string with sep= directive for Excel (no BOM).
+			-- Format: sep=<delimiter> on first line, followed by CSV data.
+		ensure
+			has_sep_directive: Result.starts_with ("sep=")
+
+	to_csv_with_bom: STRING_8
+			-- Generate CSV string with UTF-8 BOM for Excel compatibility.
+		ensure
+			has_bom: Result.count >= 3 implies (Result [1].code = 239 and Result [2].code = 187 and Result [3].code = 191)
+	
+feature -- Lenient Mode
+
+	has_parse_errors: BOOLEAN
+			-- Were there any errors during parsing?
+
+	lenient_mode: BOOLEAN
+			-- Is lenient parsing mode enabled?
+			-- When True, malformed rows are skipped and errors collected.
+
+	parse_errors: ARRAYED_LIST [STRING_8]
+			-- List of errors encountered during parsing (in lenient mode).
+
+	set_lenient_mode (a_lenient: BOOLEAN)
+			-- Enable or disable lenient parsing mode.
+		ensure
+			lenient_set: lenient_mode = a_lenient
+	
+feature -- Model Queries (MML)
+
+	column_names_model: MML_SET [STRING_8]
+			-- Set of all column names (lowercase).
+		ensure
+			count_matches: Result.count = header_map.count
+
+	data_rows_model: MML_SEQUENCE [MML_SEQUENCE [STRING_8]]
+			-- Mathematical model of data rows only (excludes header if present).
+		ensure
+			count_matches: Result.count = row_count
+
+	header_map_model: MML_MAP [STRING_8, INTEGER_32]
+			-- Mathematical model of header name to column index mapping.
+			-- Keys are lowercase header names, values are 1-based column indices.
+		ensure
+			count_matches: Result.count = header_map.count
+
+	rows_model: MML_SEQUENCE [MML_SEQUENCE [STRING_8]]
+			-- Mathematical model of all rows as sequence of sequences.
+			-- Each inner sequence represents one row's fields.
+		ensure
+			count_matches: Result.count = rows.count
+	
+feature -- Null Value Handling
+
+	is_null (a_row, a_column: INTEGER_32): BOOLEAN
+			-- Is the field at `a_row`, `a_column` a null value?
+		require
+			valid_row: a_row >= 1 and a_row <= row_count
+			valid_column: a_column >= 1 and a_column <= column_count
+
+	is_null_by_name (a_row: INTEGER_32; a_column_name: STRING_8): BOOLEAN
+			-- Is the field at `a_row`, column named `a_column_name` a null value?
+		require
+			has_header: has_header
+			valid_row: a_row >= 1 and a_row <= row_count
+			valid_column_name: has_column (a_column_name)
+
+	null_representation: detachable STRING_8
+			-- String that represents null values (e.g., "", "NULL", "NA").
+
+	set_null_representation (a_null: detachable STRING_8)
+			-- Set the string that represents null values.
+			-- Pass Void to disable null handling.
+		ensure
+			null_set: null_representation = a_null
+	
+feature -- Output
+
+	Io: STD_FILES
+			-- Handle to standard file setup
+			-- (from ANY)
+		ensure -- from ANY
+			instance_free: class
+			io_not_void: Result /= Void
+
+	out: STRING_8
+			-- New string containing terse printable representation
+			-- of current object
+			-- (from ANY)
+		ensure -- from ANY
+			out_not_void: Result /= Void
+
+	print (o: detachable ANY)
+			-- Write terse external representation of `o`
+			-- on standard output.
+			-- (from ANY)
+		ensure -- from ANY
+			instance_free: class
+
+	frozen tagged_out: STRING_8
+			-- New string containing terse printable representation
+			-- of current object
+			-- (from ANY)
+		ensure -- from ANY
+			tagged_out_not_void: Result /= Void
+	
+feature -- Parsing
+
+	from_file (a_path: STRING_8)
+			-- Parse CSV data from file at `a_path`.
+			-- Was declared in {SIMPLE_CSV} as synonym of `parse_file`, `load_file` and `read_file`.
+		require
+			path_not_empty: not a_path.is_empty
+		ensure
+			header_mode_unchanged: has_header = old has_header
+
+	from_string (a_input: STRING_8)
+			-- Parse CSV data from `a_input`.
+			-- Automatically handles UTF-8 BOM and Excel sep= directive if present.
+			-- Was declared in {SIMPLE_CSV} as synonym of `parse` and `load`.
+		ensure
+			header_mode_unchanged: has_header = old has_header
+			header_map_built: (has_header and rows.count > 0) implies header_map.count = rows.first.count
+			model_consistent: rows_model.count = rows.count
+
+	load (a_input: STRING_8)
+			-- Parse CSV data from `a_input`.
+			-- Automatically handles UTF-8 BOM and Excel sep= directive if present.
+			-- Was declared in {SIMPLE_CSV} as synonym of `parse` and `from_string`.
+		ensure
+			header_mode_unchanged: has_header = old has_header
+			header_map_built: (has_header and rows.count > 0) implies header_map.count = rows.first.count
+			model_consistent: rows_model.count = rows.count
+
+	load_file (a_path: STRING_8)
+			-- Parse CSV data from file at `a_path`.
+			-- Was declared in {SIMPLE_CSV} as synonym of `parse_file`, `read_file` and `from_file`.
+		require
+			path_not_empty: not a_path.is_empty
+		ensure
+			header_mode_unchanged: has_header = old has_header
+
+	parse (a_input: STRING_8)
+			-- Parse CSV data from `a_input`.
+			-- Automatically handles UTF-8 BOM and Excel sep= directive if present.
+			-- Was declared in {SIMPLE_CSV} as synonym of `load` and `from_string`.
+		ensure
+			header_mode_unchanged: has_header = old has_header
+			header_map_built: (has_header and rows.count > 0) implies header_map.count = rows.first.count
+			model_consistent: rows_model.count = rows.count
+
+	parse_file (a_path: STRING_8)
+			-- Parse CSV data from file at `a_path`.
+			-- Was declared in {SIMPLE_CSV} as synonym of `load_file`, `read_file` and `from_file`.
+		require
+			path_not_empty: not a_path.is_empty
+		ensure
+			header_mode_unchanged: has_header = old has_header
+
+	read_file (a_path: STRING_8)
+			-- Parse CSV data from file at `a_path`.
+			-- Was declared in {SIMPLE_CSV} as synonym of `parse_file`, `load_file` and `from_file`.
+		require
+			path_not_empty: not a_path.is_empty
+		ensure
+			header_mode_unchanged: has_header = old has_header
+	
+feature -- Platform
+
+	Operating_environment: OPERATING_ENVIRONMENT
+			-- Objects available from the operating system
+			-- (from ANY)
+		ensure -- from ANY
+			instance_free: class
+			operating_environment_not_void: Result /= Void
+	
+feature -- Query
+
+	column_index (a_name: STRING_8): INTEGER_32
+			-- Get index of column named `a_name` (1-based).
+		require
+			has_column: has_column (a_name)
+		ensure
+			valid_lower_bound: Result >= 1
+			valid_upper_bound: Result <= column_count
+			model_consistent: Result = header_map_model [a_name.as_lower]
+
+	has_column (a_name: STRING_8): BOOLEAN
+			-- Does a column with `a_name` exist?
+		ensure
+			model_consistent: Result = column_names_model [a_name.as_lower]
+
+	is_empty: BOOLEAN
+			-- Is CSV data empty?
+		ensure
+			model_consistent: Result = data_rows_model.is_empty
+	
+feature -- Row Iteration
+
+	current_field (a_column: INTEGER_32): STRING_8
+			-- Get field at `a_column` in current iteration row.
+		require
+			valid_iteration: iteration_index >= 1 and iteration_index <= row_count
+			valid_column: a_column >= 1 and a_column <= column_count
+
+	current_field_by_name (a_column_name: STRING_8): STRING_8
+			-- Get field by name in current iteration row.
+		require
+			has_header: has_header
+			valid_iteration: iteration_index >= 1 and iteration_index <= row_count
+			valid_column_name: has_column (a_column_name)
+
+	current_row: ARRAYED_LIST [STRING_8]
+			-- Get current row in iteration.
+		require
+			valid_iteration: iteration_index >= 1 and iteration_index <= row_count
+
+	iteration_index: INTEGER_32
+			-- Current row index in iteration (1-based data row).
+
+	next_row: BOOLEAN
+			-- Move to next row. Returns True if there is a next row.
+
+	start_iteration
+			-- Start row-by-row iteration from first data row.
+			-- After calling start_iteration, call next_row to advance to first row.
+		ensure
+			at_start: iteration_index = 0
+	
+feature -- Settings
+
+	delimiter: CHARACTER_8
+			-- Field delimiter (default: comma).
+
+	has_header: BOOLEAN
+			-- Does first row contain headers?
+
+	quote_char: CHARACTER_8
+			-- Quote character for escaping (default: double quote).
+
+	set_delimiter (a_delimiter: CHARACTER_8)
+			-- Set field delimiter.
+		require
+			valid_delimiter: a_delimiter /= '%N' and a_delimiter /= '%R'
+		ensure
+			delimiter_set: delimiter = a_delimiter
+	
+invariant
+	rows_exist: rows /= Void
+	header_map_exists: header_map /= Void
+	valid_delimiter: delimiter /= '%N' and delimiter /= '%R'
+	valid_quote_char: quote_char /= '%N' and quote_char /= '%R'
+	delimiter_not_quote: delimiter /= quote_char
+	parse_errors_exist: parse_errors /= Void
+
+		-- from ANY
+	reflexive_equality: standard_is_equal (Current)
+	reflexive_conformance: conforms_to (Current)
+
+note
+	copyright: "Copyright (c) 2024-2025, Larry Rix"
+	license: "MIT License"
+
+end -- class SIMPLE_CSV
+
